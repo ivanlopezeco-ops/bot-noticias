@@ -2,33 +2,65 @@ name: Ejecutar Radar Diario
 
 on:
   schedule:
-    - cron: '0 12 * * *' # 12:00 UTC = 09:00 Argentina
-    - cron: '0 19 * * *' # 19:00 UTC = 16:00 Argentina
+    - cron: '0 12 * * 1-5'  # 09:00 Argentina (lunes a viernes) — Apertura
+    - cron: '0 19 * * 1-5'  # 16:00 Argentina (lunes a viernes) — Cierre
   workflow_dispatch:
+    inputs:
+      momento:
+        description: 'Momento del día (apertura o cierre)'
+        required: false
+        default: 'apertura'
 
-# Esta línea silencia la advertencia de Node.js
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
-  run-bot:
+  apertura:
+    name: Radar Apertura (09:00 ARG)
     runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '0 12 * * 1-5'
     steps:
       - name: Checkout del código
         uses: actions/checkout@v4
-        
+
       - name: Configurar Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
-          
+          python-version: '3.11'
+
       - name: Instalar dependencias
         run: pip install -r requirements.txt
-        
-      - name: Ejecutar script
+
+      - name: Ejecutar Radar — Apertura
         env:
-          TWILIO_SID: ${{ secrets.TWILIO_SID }}
-          TWILIO_TOKEN: ${{ secrets.TWILIO_TOKEN }}
-          TU_CELULAR: ${{ secrets.TU_CELULAR }}
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }} # Esta es la línea nueva
+          TWILIO_SID:     ${{ secrets.TWILIO_SID }}
+          TWILIO_TOKEN:   ${{ secrets.TWILIO_TOKEN }}
+          TU_CELULAR:     ${{ secrets.TU_CELULAR }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          MOMENTO:        ${{ github.event.inputs.momento || 'apertura' }}
+        run: python radar.py
+
+  cierre:
+    name: Radar Cierre (16:00 ARG)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' && github.event.schedule == '0 19 * * 1-5'
+    steps:
+      - name: Checkout del código
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Instalar dependencias
+        run: pip install -r requirements.txt
+
+      - name: Ejecutar Radar — Cierre
+        env:
+          TWILIO_SID:     ${{ secrets.TWILIO_SID }}
+          TWILIO_TOKEN:   ${{ secrets.TWILIO_TOKEN }}
+          TU_CELULAR:     ${{ secrets.TU_CELULAR }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          MOMENTO:        cierre
         run: python radar.py
