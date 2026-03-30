@@ -6,6 +6,10 @@ on:
     - cron: '0 19 * * *' # 19:00 UTC = 16:00 Argentina
   workflow_dispatch:
 
+# Esta línea silencia la advertencia de Node.js
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   run-bot:
     runs-on: ubuntu-latest
