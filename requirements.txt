@@ -2,4 +2,4 @@ requests
 beautifulsoup4
 twilio
 feedparser
-google-generativeai
+google-genai
