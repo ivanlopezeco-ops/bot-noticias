@@ -1,6 +1,8 @@
 import os
 import time
+import requests
 import feedparser
+from bs4 import BeautifulSoup
 from google import genai
 from google.genai.errors import ServerError
 from datetime import datetime, timezone
@@ -35,6 +37,47 @@ FUENTES_RSS = [
     "https://www.pagina12.com.ar/rss/secciones/economia/notas",
     "https://www.parlamentario.com/rss/economia",
 ]
+
+
+def obtener_cotizaciones_dolar():
+    """Extrae las cotizaciones del d\u00f3lar desde DolarHoy.com."""
+    URL_DH = "https://dolarhoy.com/"
+    headers = {'User-Agent': 'Mozilla/5.0'}
+    cotizaciones = {}
+    try:
+        response = requests.get(URL_DH, headers=headers, timeout=15)
+        if response.status_code == 200:
+            soup = BeautifulSoup(response.text, 'html.parser')
+            # Los tiles de cotizaci\u00f3n suelen tener la clase 'tile-comp'
+            tiles = soup.find_all('div', class_='tile-comp')
+            for tile in tiles:
+                tit = tile.find('a', class_='title')
+                if not tit:
+                    continue
+                nombre = tit.text.strip().lower()
+                
+                # Extraemos valores de compra y venta
+                val_compra = tile.find('div', class_='compra')
+                val_venta = tile.find('div', class_='venta')
+                
+                if val_compra and val_venta:
+                    v_compra = val_compra.find('div', class_='val').text.strip()
+                    v_venta = val_venta.find('div', class_='val').text.strip()
+                    
+                    if 'blue' in nombre or 'libre' in nombre:
+                        cotizaciones['Blue'] = f"Compra: {v_compra} / Venta: {v_venta}"
+                    elif 'mep' in nombre or 'bolsa' in nombre:
+                        cotizaciones['MEP'] = f"Compra: {v_compra} / Venta: {v_venta}"
+                    elif 'liqui' in nombre or 'ccl' in nombre:
+                        cotizaciones['CCL'] = f"Compra: {v_compra} / Venta: {v_venta}"
+                    elif 'oficial' in nombre:
+                        cotizaciones['Oficial'] = f"Compra: {v_compra} / Venta: {v_venta}"
+        else:
+            print(f"[WARN] No se pudo acceder a DolarHoy. Status: {response.status_code}")
+    except Exception as e:
+        print(f"[WARN] Error al obtener cotizaciones: {e}")
+    
+    return cotizaciones
 
 
 # ─────────────────────────────────────────
@@ -73,9 +116,14 @@ def obtener_noticias_crudas():
 # ─────────────────────────────────────────
 # Analizar con Gemini según el momento del día
 # ─────────────────────────────────────────
-def analizar_con_ia(noticias: list[str]) -> str:
+def analizar_con_ia(noticias: list[str], cotizaciones: dict) -> str:
     texto_noticias = "\n".join(noticias)
     ahora_str = datetime.now(TZ_ARG).strftime("%d/%m/%Y %H:%M")
+
+    # Formatear cotizaciones para el prompt
+    precios_str = "\n".join([f"- {k}: {v}" for k, v in cotizaciones.items()])
+    if not precios_str:
+        precios_str = "No se pudieron obtener cotizaciones en tiempo real."
 
     if MOMENTO == "cierre":
         contexto_momento = (
@@ -98,6 +146,9 @@ def analizar_con_ia(noticias: list[str]) -> str:
 Sos un analista económico senior argentino que redacta un reporte diario ejecutivo para directivos industriales.
 {contexto_momento}
 
+COTIZACIONES REALES DEL DÓLAR (USAR ESTOS DATOS):
+{precios_str}
+
 NOTICIAS DEL DÍA:
 {texto_noticias}
 
@@ -106,7 +157,7 @@ Redactá el reporte con EXACTAMENTE este formato (respetalo al pie de la letra, 
 {emoji_momento} *Radar Económico — {label_momento} | {ahora_str}*
 
 💵 *MERCADO & DÓLAR*
-[Una línea concisa con los valores del dólar blue, oficial, MEP y CCL si aparecen en las noticias. Si no hay datos, escribí "Sin datos de cotización en esta edición."]
+[Resumí en una sola línea los valores del Blue, MEP y CCL usando las COTIZACIONES REALES provistas arriba. Si hay noticias sobre brecha o tendencia, podés agregarlas brevemente.]
 
 📊 *MACROECONOMÍA* (las 3 noticias de mayor impacto)
 • [Título muy corto, máx. 12 palabras] → [Link]
@@ -154,6 +205,10 @@ def enviar_reporte():
     print(f"[INFO] Ejecutando Radar — Momento: {MOMENTO}")
     noticias = obtener_noticias_crudas()
     print(f"[INFO] Noticias encontradas hoy: {len(noticias)}")
+    
+    # Nuevo: obtener cotizaciones antes de analizar
+    cotizaciones = obtener_cotizaciones_dolar()
+    print(f"[INFO] Cotizaciones obtenidas: {len(cotizaciones)}")
 
     if len(noticias) < 3:
         ahora_str = datetime.now(TZ_ARG).strftime("%d/%m/%Y %H:%M")
@@ -163,7 +218,7 @@ def enviar_reporte():
             "Es posible que los feeds estén sin actualizar o que sea un día sin actividad."
         )
     else:
-        resumen = analizar_con_ia(noticias)
+        resumen = analizar_con_ia(noticias, cotizaciones)
 
     cliente = Client(TWILIO_SID, TWILIO_TOKEN)
     cliente.messages.create(
