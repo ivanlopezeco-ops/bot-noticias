@@ -1,6 +1,8 @@
 import os
+import time
 import feedparser
 from google import genai
+from google.genai.errors import ServerError
 from datetime import datetime
 from zoneinfo import ZoneInfo
 from twilio.rest import Client
@@ -52,13 +54,24 @@ def analizar_con_ia(texto_noticias):
     6. Límite: Máximo 1500 caracteres totales.
     """
     
-    # Nueva sintaxis de Google GenAI
     client = genai.Client(api_key=GEMINI_KEY)
-    response = client.models.generate_content(
-        model='gemini-2.5-flash',
-        contents=prompt
-    )
-    return response.text
+    
+    # Intentamos 3 veces si el servidor está ocupado (Error 503)
+    intentos = 0
+    while intentos < 3:
+        try:
+            response = client.models.generate_content(
+                model='gemini-2.5-flash',
+                contents=prompt
+            )
+            return response.text
+        except ServerError as e:
+            print(f"Servidor ocupado. Reintentando en 10 segundos... (Intento {intentos + 1}/3)")
+            time.sleep(10)
+            intentos += 1
+            
+    # Si falla 3 veces seguidas, devolvemos un mensaje de error limpio en vez de que explote
+    return "🤖 *Radar Diario*\n\nLas noticias fueron recolectadas, pero el sistema de análisis está saturado. Intente más tarde."
 
 def enviar_reporte():
     noticias_raw = obtener_noticias_crudas()
