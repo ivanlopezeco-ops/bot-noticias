@@ -30,4 +30,5 @@ jobs:
           TWILIO_SID: ${{ secrets.TWILIO_SID }}
           TWILIO_TOKEN: ${{ secrets.TWILIO_TOKEN }}
           TU_CELULAR: ${{ secrets.TU_CELULAR }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }} # Esta es la línea nueva
         run: python radar.py
