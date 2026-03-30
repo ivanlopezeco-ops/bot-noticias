@@ -5,7 +5,7 @@ import feedparser
 from bs4 import BeautifulSoup
 from google import genai
 from google.genai.errors import ServerError
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from zoneinfo import ZoneInfo
 from twilio.rest import Client
 
@@ -81,15 +81,20 @@ def obtener_cotizaciones_dolar():
 
 
 # ─────────────────────────────────────────
-# Obtener noticias del día con fix timezone
+# Obtener noticias del día con ventana dinámica
 # ─────────────────────────────────────────
+
 def obtener_noticias_crudas():
     """
     Scrapeea todos los feeds RSS y devuelve las noticias
-    publicadas HOY según la hora de Argentina (no UTC).
+    publicadas en las \u00faltimas 24 horas (o 72 horas si es lunes).
     """
     noticias = set()
-    hoy_arg  = datetime.now(TZ_ARG).date()
+    ahora_arg = datetime.now(TZ_ARG)
+    
+    # Definir ventana: lunes cubre el finde (72h), resto 24h
+    horas_atras = 72 if ahora_arg.weekday() == 0 else 24
+    limite_temporal = ahora_arg - timedelta(hours=horas_atras)
 
     for url in FUENTES_RSS:
         try:
@@ -98,13 +103,14 @@ def obtener_noticias_crudas():
                 if not hasattr(entry, 'published_parsed') or not entry.published_parsed:
                     continue
 
-                # FIX: el feed publica en UTC → convertir a hora argentina
+                # Convertir publicaci\u00f3n a datetime con zona horaria Argentina
                 fecha_utc = datetime(*entry.published_parsed[:6], tzinfo=timezone.utc)
-                fecha_arg = fecha_utc.astimezone(TZ_ARG).date()
+                fecha_arg = fecha_utc.astimezone(TZ_ARG)
 
-                if fecha_arg == hoy_arg:
+                # Comparar con el l\u00edmite temporal
+                if fecha_arg >= limite_temporal:
                     link_limpio = entry.link.split('?')[0]
-                    noticias.add(f"TÍTULO: {entry.title} | LINK: {link_limpio}")
+                    noticias.add(f"T\u00cdTULO: {entry.title} | LINK: {link_limpio}")
 
         except Exception as e:
             print(f"[WARN] Error procesando {url}: {e}")
