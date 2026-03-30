@@ -1,0 +1,29 @@
+name: Ejecutar Radar Diario
+
+on:
+  schedule:
+    - cron: '0 12 * * *' # 12:00 UTC = 09:00 Argentina
+    - cron: '0 19 * * *' # 19:00 UTC = 16:00 Argentina
+  workflow_dispatch: # Esto nos permite probarlo manualmente con un botón
+
+jobs:
+  run-bot:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout del código
+        uses: actions/checkout@v3
+        
+      - name: Configurar Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+          
+      - name: Instalar dependencias
+        run: pip install -r requirements.txt
+        
+      - name: Ejecutar script
+        env:
+          TWILIO_SID: ${{ secrets.TWILIO_SID }}
+          TWILIO_TOKEN: ${{ secrets.TWILIO_TOKEN }}
+          TU_CELULAR: ${{ secrets.TU_CELULAR }}
+        run: python radar.py
