@@ -1,6 +1,6 @@
 import os
 import feedparser
-import google.generativeai as genai
+from google import genai
 from datetime import datetime
 from zoneinfo import ZoneInfo
 from twilio.rest import Client
@@ -11,9 +11,6 @@ TWILIO_TOKEN = os.environ.get('TWILIO_TOKEN')
 NUMERO_TWILIO = 'whatsapp:+14155238886' 
 TU_CELULAR = os.environ.get('TU_CELULAR')
 GEMINI_KEY = os.environ.get('GEMINI_API_KEY')
-
-genai.configure(api_key=GEMINI_KEY)
-model = genai.GenerativeModel('gemini-1.5-flash')
 
 FUENTES_RSS = [
     "https://www.infobae.com/arc/outboundfeeds/rss/economia/?outputType=xml",
@@ -54,7 +51,13 @@ def analizar_con_ia(texto_noticias):
     5. No uses negritas exageradas, mantené el formato limpio para WhatsApp.
     6. Límite: Máximo 1500 caracteres totales.
     """
-    response = model.generate_content(prompt)
+    
+    # Nueva sintaxis de Google GenAI
+    client = genai.Client(api_key=GEMINI_KEY)
+    response = client.models.generate_content(
+        model='gemini-2.5-flash',
+        contents=prompt
+    )
     return response.text
 
 def enviar_reporte():
