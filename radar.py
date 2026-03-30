@@ -27,7 +27,7 @@ def obtener_noticias():
                     resumen.append(f"📌 {titulo}\n🔗 {full_link}")
         except: continue
     # Eliminamos duplicados y limitamos a 10 noticias
-    return list(set(resumen))[:10]
+    return list(set(resumen))[:5]
 
 def enviar_reporte():
     noticias = obtener_noticias()
@@ -35,6 +35,10 @@ def enviar_reporte():
         texto = "🤖 *Radar Económico Diario*\n\nHoy no encontré noticias relevantes con tus palabras clave."
     else:
         texto = "🤖 *Radar Económico Diario*\n\n" + "\n\n".join(noticias)
+        
+    # Cortamos el mensaje si supera los 1500 caracteres por seguridad
+    if len(texto) > 1500:
+        texto = texto[:1500] + "\n\n... [Mensaje acortado por límite de caracteres]"
         
     cliente = Client(TWILIO_SID, TWILIO_TOKEN)
     cliente.messages.create(body=texto, from_=NUMERO_TWILIO, to=TU_CELULAR)
