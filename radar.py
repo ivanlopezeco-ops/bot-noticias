@@ -134,7 +134,7 @@ CRITERIOS DE SELECCIÓN:
 - Macro prioritario: inflación (IPC), reservas, balanza comercial, PBI, actividad económica, deuda.
 - Industria prioritario: EMI (Estimador Mensual Industrial), tarifas, importaciones, crédito productivo.
 - DESCARTÁ: cotizaciones del dólar (no incluirlas en el reporte), opinión sin datos, lifestyle, deportes, política sin impacto económico directo.
-- Máximo 1800 caracteres totales en la respuesta.
+- Máximo 1500 caracteres totales en la respuesta, ¡ESTO ES MUY IMPORTANTE PARA QUE ENTRE EN WHATSAPP!
 """
 
     client = genai.Client(api_key=GEMINI_KEY)
