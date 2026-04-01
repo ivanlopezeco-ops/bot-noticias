@@ -14,7 +14,7 @@ from twilio.rest import Client
 # ─────────────────────────────────────────
 TWILIO_SID    = os.environ.get('TWILIO_SID')
 TWILIO_TOKEN  = os.environ.get('TWILIO_TOKEN')
-NUMERO_TWILIO = 'whatsapp:+14155238886'
+NUMERO_TWILIO = os.environ.get('NUMERO_TWILIO', 'whatsapp:+14155238886')
 TU_CELULAR    = os.environ.get('TU_CELULAR')
 GEMINI_KEY    = os.environ.get('GEMINI_API_KEY')
 MOMENTO       = os.environ.get('MOMENTO', 'apertura')  # 'apertura' o 'cierre'
