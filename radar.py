@@ -175,9 +175,13 @@ def enviar_reporte():
     else:
         resumen = analizar_con_ia(noticias)
 
+    resumen = resumen.strip()
+    if len(resumen) > 1590:
+        resumen = resumen[:1590] + " [...]"
+
     cliente = Client(TWILIO_SID, TWILIO_TOKEN)
     cliente.messages.create(
-        body=resumen.strip(),
+        body=resumen,
         from_=NUMERO_TWILIO,
         to=TU_CELULAR
     )
